@@ -1,40 +1,27 @@
-from parsers.CosmeticsReviewSearcher import CosmeticsReviewSearcher
+from app.services.search.search_manager import SearchManager
+from app.services.storage.json_storage import JSONStorage
 
-if __name__ == "__main__":
-
-    print("===================================")
-    print(" AI Cosmetics Review Search System ")
-    print("===================================\n")
-
-    # Ввод продукта из консоли
-    product_name = input(
-        "Введите название косметического продукта: "
-    ).strip()
+def main():
+    product_name = input("Введите продукт: ")
 
     if not product_name:
-        print("[ERROR] Название продукта пустое!")
-        exit()
+        print("[ERROR] Empty product name")
+        return
 
-    # Количество результатов
-    try:
-        max_results = int(
-            input("Введите количество результатов (например 5): ")
-        )
-    except ValueError:
-        max_results = 5
+    manager = SearchManager()
 
-    searcher = CosmeticsReviewSearcher()
-
-    reviews = searcher.search_reviews(
+    results = manager.search(
         product_name=product_name,
-        max_results=max_results
+        max_results=5
     )
 
-    print("\n===================")
-    print(f"Всего найдено: {len(reviews)}")
+    print(f"\n[INFO] Найдено: {len(results)}")
 
-    # Сохранение
-    searcher.save_to_json(
-        product_name=product_name,
-        data=reviews
-    )
+    storage = JSONStorage()
+    
+    for result in results:
+        print(result.to_dict())
+
+
+if __name__ == "__main__":
+    main()
