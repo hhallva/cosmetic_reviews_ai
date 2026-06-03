@@ -12,6 +12,25 @@ SEARCH_PATTERNS = [
     '"{product}" opinion',
 ]
 
+PRODUCTS = {
+    "Cabaret": [
+        "Premiere Mascara",
+        "Latex Mascara",
+        "Premiere Waterproof"
+    ],
+
+    "Rouge Feministe": [
+        "Lipstick",
+        "Velvet"
+    ],
+
+    "Pure Dermatol": [
+        "Cleansing Gel",
+        "Micellar Water",
+        "Cream"
+    ]
+}
+
 STOP_WORDS = frozenset({
         # 🇷🇺 Русские
         'и', 'в', 'во', 'не', 'на', 'с', 'со', 'а', 'о', 'об', 'от', 'до', 'по',

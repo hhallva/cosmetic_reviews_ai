@@ -1,3 +1,5 @@
 google-search-results
 sentence-transformers
 scikit-learn
+streamlit
+streamlit-searchbox
