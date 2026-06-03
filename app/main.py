@@ -19,9 +19,10 @@ def main():
 
     storage = JSONStorage()
     
-    for result in results:
-        print(result.to_dict())
-
+    storage.save_search_results(
+        product_name=product_name,
+        results=results
+    )
 
 if __name__ == "__main__":
     main()

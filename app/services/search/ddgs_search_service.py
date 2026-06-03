@@ -1,22 +1,19 @@
 from ddgs.ddgs import DDGS
 
+from app.core.constants import MAX_RESULTS_PER_QUERY
 from app.models.search_result import SearchResult
 from .base_search_service import BaseSearchService
 from .query_builder import QueryBuilder
 
 
 class DDGSSearchService(BaseSearchService):
-     
     def __init__(self):
         self.query_builder = QueryBuilder()
 
-    def search(self, product_name: str, max_results: int = 10):
-
+    def search(self, product_name: str, max_results: int = MAX_RESULTS_PER_QUERY):
         all_results = []
 
-        queries = self.query_builder.build_queries(
-            product_name
-        )
+        queries = self.query_builder.build_queries(product_name)
 
         with DDGS() as search:
             for query in queries:
