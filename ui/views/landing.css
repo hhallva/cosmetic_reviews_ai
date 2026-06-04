@@ -1,0 +1,53 @@
+/* Вертикальное и горизонтальное центрирование */
+.landing-container {
+    margin-top: 12vh;
+    text-align: center;
+}
+
+/* Большой заголовок */
+.main-title {
+    font-size: 4rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+}
+
+/* Подзаголовок */
+.subtitle {
+    color: #868e96 !important;
+    font-size: 1.25rem !important;
+    font-weight: 400 !important;
+    margin-top: 0 !important;
+    margin-bottom: 3rem !important;
+}
+
+/* Кнопка-ссылка в стиле outline (прозрачная с рамкой) */
+.link-style-btn button {
+    background: transparent !important;
+    border: 1px solid #495057 !important;
+    color: #e9ecef !important;
+    text-decoration: none !important;
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    padding: 12px 24px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    max-width: 400px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.link-style-btn button:hover {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border-color: #868e96 !important;
+    color: #fff !important;
+}
+
+/* Скрываем лейбл у selectbox */
+.stSelectbox [data-baseweb="select"] {
+    margin-top: 0 !important;
+}
+
+/* Увеличиваем шрифт в selectbox */
+.stSelectbox input {
+    font-size: 1.1rem !important;
+}

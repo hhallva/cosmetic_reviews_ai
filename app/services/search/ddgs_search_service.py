@@ -1,6 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from ddgs.ddgs import DDGS
 
-from app.core.constants import MAX_RESULTS_PER_QUERY
 from app.models.search_result import SearchResult
 from .base_search_service import BaseSearchService
 from .query_builder import QueryBuilder
@@ -10,37 +11,64 @@ class DDGSSearchService(BaseSearchService):
     def __init__(self):
         self.query_builder = QueryBuilder()
 
-    def search(self, product_name: str, max_results: int = MAX_RESULTS_PER_QUERY):
-        all_results = []
+    def search_single_query(self, query, max_results):
+        results_list = []
 
-        queries = self.query_builder.build_queries(product_name)
+        try:
 
-        with DDGS() as search:
-            for query in queries:
-                print(f"[INFO] {query}")
+            with DDGS() as search:
 
-                try:
-                    results = search.text(
-                        query,
-                        max_results=max_results
-                    )
+                results = search.text(
+                    query,
+                    max_results=max_results
+                )
 
-                    results = list(results)
-
-                    for item in results:
-                        search_result = SearchResult(
+                for item in results:
+                    results_list.append(
+                        SearchResult(
                             title=item.get("title", ""),
                             url=item.get("href", ""),
                             description=item.get("body", ""),
                             source="ddgs",
                             query=query
                         )
+                    )
 
-                        all_results.append(
-                            search_result
-                        )
+        except Exception as e:
 
-                except Exception as e:
-                    print(f"[ERROR] {e}")
+            print(f"[ERROR] {query}: {e}")
+
+        return results_list
+
+    def search(
+            self,
+            product_name,
+            max_results=10
+    ):
+
+        queries = self.query_builder.build_queries(
+            product_name
+        )
+
+        all_results = []
+
+        with ThreadPoolExecutor(
+                max_workers=len(queries)
+        ) as executor:
+            futures = [
+
+                executor.submit(
+                    self.search_single_query,
+                    query,
+                    max_results
+                )
+
+                for query in queries
+            ]
+
+            for future in futures:
+                all_results.extend(
+                    future.result()
+                )
 
         return all_results
