@@ -1,9 +1,6 @@
 REVIEW_SITES = [
         "otzovik.com",
         "irecommend.ru",
-        "wildberries.ru",
-        "ozon.ru",
-        "makeup.com.ua"
     ]
 
 SEARCH_PATTERNS = [
