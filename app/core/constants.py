@@ -1,14 +1,3 @@
-REVIEW_SITES = [
-        "otzovik.com",
-        "irecommend.ru",
-    ]
-
-SEARCH_PATTERNS = [
-    '"{product}" отзывы',
-    '"{product}" review',
-    '"{product}" opinion',
-]
-
 PRODUCTS = {
     "Cabaret": [
         "Premiere Mascara",
@@ -41,6 +30,3 @@ STOP_WORDS = frozenset({
         'this', 'that', 'these', 'those', 'it', 'its', 'i', 'you', 'he', 'she',
         'we', 'they', 'my', 'your', 'his', 'her', 'our', 'their'
     })
-
-
-MAX_RESULTS_PER_QUERY: int = 10
