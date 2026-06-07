@@ -13,23 +13,23 @@ def render_dashboard():
         st.divider()
 
         # Кнопки навигации с подсветкой активной
-        if st.button("📊 Дашборд", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "📊 Дашборд" else "secondary"):
+        if st.button("Дашборд", use_container_width=True,
+                     type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary"):
             st.session_state.dashboard_tab = "📊 Дашборд"
             st.rerun()
 
-        if st.button("📝 Отзывы", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "📝 Отзывы" else "secondary"):
+        if st.button("Отзывы", use_container_width=True,
+                     type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary"):
             st.session_state.dashboard_tab = "📝 Отзывы"
             st.rerun()
 
-        if st.button("🔗 Источники", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "🔗 Источники" else "secondary"):
+        if st.button("Источники", use_container_width=True,
+                     type="primary" if st.session_state.dashboard_tab == "Источники" else "secondary"):
             st.session_state.dashboard_tab = "🔗 Источники"
             st.rerun()
 
         st.divider()
-        if st.button("🏠 На главную", type="secondary", use_container_width=True):
+        if st.button("На главную", type="secondary", use_container_width=True):
             st.session_state.page = "landing"
             st.session_state.selected_product = ""
             st.session_state.report_data = None

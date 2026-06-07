@@ -5,3 +5,4 @@ streamlit
 streamlit-searchbox
 plotly
 pandas
+ddgs

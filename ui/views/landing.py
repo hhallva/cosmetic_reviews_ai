@@ -40,6 +40,7 @@ def render_landing(all_options):
                 label_visibility="collapsed",
                 options=all_options,
                 index=None,
+                key="landing_product_select",
                 placeholder="Начните вводить название товара...",
             )
 

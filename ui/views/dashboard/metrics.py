@@ -65,4 +65,4 @@ def render_metrics_view(metrics: dict, segments_df, trends_df, ai_text: str, pro
 
     st.divider()
     st.markdown('<div class="section-header">🤖 ИИ-Вывод и рекомендации</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="ai-block">{ai_text}</div>', unsafe_allow_html=True)
+    st.markdown(ai_text, unsafe_allow_html=True)

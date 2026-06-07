@@ -49,8 +49,41 @@ def generate_mock_data(product_name: str):
 
 
 # Моковые сохраненные отчеты для списка
+# НОВАЯ СТРУКТУРА: список словарей с отдельными полями для удобной фильтрации
 MOCK_SAVED_REPORTS = [
-    "Тушь Cabaret Premiere (от 01.06.2024)",
-    "Карандаш для глаз Cinecitta (от 28.05.2024)",
-    "Помада Matte Lasting (от 15.05.2024)"
+    {
+        "product": "Тушь Cabaret Premiere",
+        "date": datetime(2024, 6, 1),
+        "display_name": "Тушь Cabaret Premiere (от 01.06.2024)",
+        "rating": 4.7,
+        "reviews_count": 1243
+    },
+    {
+        "product": "Карандаш для глаз Cinecitta",
+        "date": datetime(2024, 5, 28),
+        "display_name": "Карандаш для глаз Cinecitta (от 28.05.2024)",
+        "rating": 4.3,
+        "reviews_count": 567
+    },
+    {
+        "product": "Помада Matte Lasting",
+        "date": datetime(2024, 5, 15),
+        "display_name": "Помада Matte Lasting (от 15.05.2024)",
+        "rating": 4.5,
+        "reviews_count": 892
+    },
+    {
+        "product": "Тушь Cabaret Volume",
+        "date": datetime(2024, 4, 20),
+        "display_name": "Тушь Cabaret Volume (от 20.04.2024)",
+        "rating": 4.2,
+        "reviews_count": 734
+    },
+    {
+        "product": "Тональный крем Skin Perfect",
+        "date": datetime(2024, 4, 5),
+        "display_name": "Тональный крем Skin Perfect (от 05.04.2024)",
+        "rating": 3.9,
+        "reviews_count": 445
+    },
 ]
