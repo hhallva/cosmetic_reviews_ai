@@ -4,6 +4,7 @@ from urllib.parse import urlparse, parse_qs, urlencode
 
 from ddgs.ddgs import DDGS
 
+from app.core.constants import REVIEW_SITES
 from app.models.search_result import SearchResult
 from .base_search_service import BaseSearchService
 from .query_builder import QueryBuilder
@@ -32,21 +33,6 @@ class DDGSSearchService(BaseSearchService):
             "-review",  # Единичные обзоры типа "mascara-review"
         ]
 
-        # Чёрный список доменов (спам, нерелевант, зеркала, кэш, подборки)
-        self.blacklisted_domains = [
-            "tripadvisor.com",
-            "yourvougesnikestore.com",
-            "web.archive.org",           # Кэш — дублирует оригинал
-            "irecommend.reviews",        # Зеркало irecommend
-            "swizzlecms.com",            # Сайт-подборка
-            "thegoodmotherproject.com",  # Сайт-подборка
-            "vampyvarnish.com",          # Сайт-подборка
-            "pinterest.com",             # Пины с картинками, не отзывы
-            "tiktok.com",                # Видео, не текстовые отзывы
-            "youtube.com",               # Видео, не текстовые отзывы
-        ]
-
-
         # Параметры URL, которые нужно игнорировать при нормализации
         self.ignored_query_params = {
             'page', 'p', 'pg', 'offset',  # Пагинация
@@ -56,6 +42,13 @@ class DDGSSearchService(BaseSearchService):
             'utm_campaign', 'utm_content',
             'utm_term', 'ref', 'from_market',
         }
+
+    def _is_allowed_domain(self, hostname: str) -> bool:
+        """Проверка, что домен входит в белый список."""
+        if not hostname:
+            return False
+        hostname = hostname.lower()
+        return any(site in hostname for site in REVIEW_SITES)
 
     def _is_valid_url(self, url: str) -> bool:
         """Проверка, что URL валидный и не мусорный."""
@@ -72,14 +65,7 @@ class DDGSSearchService(BaseSearchService):
             hostname = (parsed.hostname or "").lower()
             path = parsed.path.lower()
 
-            # Отбрасываем рекламные редиректы
-            if "bing.com" in hostname and "/aclick" in url:
-                return False
-            if "google." in hostname and "/url?" in url:
-                return False
-
-            # Отбрасываем чёрный список доменов
-            if any(domain in hostname for domain in self.blacklisted_domains):
+            if not self._is_allowed_domain(hostname):
                 return False
 
             # Отбрасываем страницы товаров/категорий
@@ -119,7 +105,6 @@ class DDGSSearchService(BaseSearchService):
             path = parsed.path
 
             # === irecommend.ru ===
-            # Убираем page, new, rate, sort — это пагинация/сортировка одной темы
             if "irecommend.ru" in hostname:
                 query_params = parse_qs(parsed.query)
                 filtered_params = {
@@ -133,8 +118,6 @@ class DDGSSearchService(BaseSearchService):
                 return parsed._replace(query=normalized_query).geturl()
 
             # === otzovik.com ===
-            # /reviews/.../11/ → /reviews/.../ (убираем номер страницы)
-            # /review_XXXXX.html → оставляем как есть (конкретный отзыв)
             if "otzovik.com" in hostname:
                 if "/reviews/" in path:
                     parts = [p for p in path.split("/") if p]
@@ -151,11 +134,25 @@ class DDGSSearchService(BaseSearchService):
                 normalized_query = urlencode(filtered_params, doseq=True)
                 return parsed._replace(query=normalized_query).geturl()
 
-            # === kosmetista.ru ===
-            # Убираем /pageX/ из path
-            if "kosmetista.ru" in hostname:
-                path = re.sub(r'/page\d+/', '/', path)
-                return parsed._replace(path=path, query="").geturl()
+            # === wildberries.ru ===
+            if "wildberries.ru" in hostname:
+                query_params = parse_qs(parsed.query)
+                filtered_params = {
+                    k: v for k, v in query_params.items()
+                    if k.lower() not in self.ignored_query_params
+                }
+                normalized_query = urlencode(filtered_params, doseq=True)
+                return parsed._replace(query=normalized_query).geturl()
+
+            # === ozon.ru ===
+            if "ozon.ru" in hostname:
+                query_params = parse_qs(parsed.query)
+                filtered_params = {
+                    k: v for k, v in query_params.items()
+                    if k.lower() not in self.ignored_query_params
+                }
+                normalized_query = urlencode(filtered_params, doseq=True)
+                return parsed._replace(query=normalized_query).geturl()
 
             # === По умолчанию ===
             # Только UTM-метки
@@ -174,7 +171,6 @@ class DDGSSearchService(BaseSearchService):
         results_list = []
 
         try:
-
             with DDGS() as search:
                 results = search.text(
                     query,
@@ -194,11 +190,8 @@ class DDGSSearchService(BaseSearchService):
                             query=query
                         )
                     )
-
         except Exception as e:
-
             print(f"[ERROR] {query}: {e}")
-
         return results_list
 
     def search(

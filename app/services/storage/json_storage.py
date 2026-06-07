@@ -5,47 +5,32 @@ from datetime import datetime
 
 
 class JSONStorage:
-
-    def __init__(self):
-        self.data_folder = "..\\data"
-        os.makedirs(self.data_folder, exist_ok=True)
+    def __init__(self, output_dir: str = "output"):
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def save_search_results(self, product_name: str, results):
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        safe_name = (
-            product_name
-            .replace(" ", "_")
-            .replace("/", "_")
-            .replace("\\", "_")
-        )
-        filename = (f"{safe_name}_{timestamp}.json")
+        created_at = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        filepath = os.path.join(
-            self.data_folder,
-            filename
-        )
-
-        payload = {
+        data = {
             "product_name": product_name,
-            "created_at": timestamp,
+            "created_at": created_at,
             "reviews_count": len(results),
-            "reviews": [
-                result.to_dict()
-                for result in results
-            ]
+            "reviews": [r.to_dict() for r in results],
         }
 
-        with open(filepath,"w",encoding="utf-8") as file:
-            json.dump(
-                payload,
-                file,
-                ensure_ascii=False,
-                indent=4
-            )
+        safe_name = "".join(
+            c if c.isalnum() or c in (" ", "-", "_") else "_"
+            for c in product_name
+        ).strip()
 
-        print(f"\n[SUCCESS] JSON saved:")
-        print(filepath)
+        filename = f"{safe_name}_{created_at}.json"
+        filepath = os.path.join(self.output_dir, filename)
 
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+        print(f"[SUCCESS] JSON saved: {filepath}")
         return filepath
 
     def save_parsed_reviews(self, product_name: str, reviews: list):
@@ -70,5 +55,5 @@ class JSONStorage:
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
 
-        print(f"[SAVE] Отзывы сохранены в: {filepath}")
+        print(f"[SUCCESS] Parsed reviews saved: {filepath}")
         return filepath
