@@ -1,8 +1,7 @@
 import json
 from pathlib import Path
-from typing import Optional
 
-from app.models.dataset import Dataset, DatasetInfo, Product, Review
+from app.models.dataset import Dataset, Review
 
 
 class DatasetLoadError(Exception):
@@ -10,17 +9,23 @@ class DatasetLoadError(Exception):
 
 
 class DatasetLoader:
-    """Загружает JSON-датасет, валидирует и возвращает объект Dataset."""
+    """
+    Работает ТОЛЬКО с единым форматом:
+    {
+        "source": "irecommend.ru",
+        "product": "Название продукта",
+        "brand": "Бренд",
+        "reviews": [...]
+    }
+    """
 
-    REQUIRED_TOP_KEYS = {"dataset_info", "product", "reviews"}
-    REQUIRED_PRODUCT_KEYS = {"name", "brand"}
+    REQUIRED_KEYS = {"source", "product", "brand", "reviews"}
 
     def __init__(self, storage_dir: str | Path = "data/datasets"):
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def load_from_file(self, file_path: str | Path) -> Dataset:
-        """Загружает датасет из JSON-файла."""
         file_path = Path(file_path)
         if not file_path.exists():
             raise DatasetLoadError(f"Файл не найден: {file_path}")
@@ -28,34 +33,34 @@ class DatasetLoader:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        return self._validate_and_build(data, source_file=file_path.name)
+        return self._build(data)
 
-    def load_from_dict(self, data: dict, source_file: str = "manual") -> Dataset:
-        """Загружает датасет из dict (например, из API)."""
-        return self._validate_and_build(data, source_file=source_file)
+    def load_from_dict(self, data: dict) -> Dataset:
+        return self._build(data)
 
     def save(self, dataset: Dataset) -> Path:
-        """Сохраняет датасет в JSON-файл."""
+        """Сохраняет в ТОМ ЖЕ формате, что и принимает."""
         file_path = self.storage_dir / f"{dataset.id}.json"
+
+        data = {
+            "source": dataset.source,
+            "product": dataset.product,
+            "brand": dataset.brand,
+            "reviews": [r.model_dump() for r in dataset.reviews],
+        }
+
         with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(dataset.model_dump(), f, ensure_ascii=False, indent=2)
-        dataset.file_path = str(file_path)
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
         return file_path
 
-    def _validate_and_build(self, data: dict, source_file: str) -> Dataset:
-        """Валидирует структуру и собирает Dataset."""
-        # Проверка топ-уровня
-        missing = self.REQUIRED_TOP_KEYS - set(data.keys())
+    def _build(self, data: dict) -> Dataset:
+        # Валидация ключей
+        missing = self.REQUIRED_KEYS - set(data.keys())
         if missing:
             raise DatasetLoadError(f"Отсутствуют ключи: {missing}")
 
-        # Проверка product
-        product_data = data["product"]
-        missing_prod = self.REQUIRED_PRODUCT_KEYS - set(product_data.keys())
-        if missing_prod:
-            raise DatasetLoadError(f"В product отсутствуют ключи: {missing_prod}")
-
-        # Парсинг reviews
+        # Парсинг отзывов
         reviews = []
         for i, rev_data in enumerate(data["reviews"], start=1):
             try:
@@ -71,15 +76,15 @@ class DatasetLoader:
                 )
                 reviews.append(rev)
             except Exception as e:
-                raise DatasetLoadError(f"Ошибка в отзыве #{i}: {e}")
+                print(f"⚠️ Пропущен отзыв #{i}: {e}")
+                continue
 
-        dataset = Dataset(
-            name=source_file,
-            source=data["dataset_info"].get("source", "unknown"),
-            product_name=product_data["name"],
-            brand=product_data["brand"],
-            reviews_count=len(reviews),
+        if not reviews:
+            raise DatasetLoadError("В датасете нет валидных отзывов")
+
+        return Dataset(
+            source=str(data["source"]),
+            product=str(data["product"]),
+            brand=str(data["brand"]),
             reviews=reviews,
         )
-
-        return dataset

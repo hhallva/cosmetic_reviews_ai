@@ -6,7 +6,6 @@ streamlit-searchbox
 plotly
 pandas
 ddgs
-cloudscraper
 requests
 beautifulsoup4
-playwright
+pydantic
