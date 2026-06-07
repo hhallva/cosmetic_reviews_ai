@@ -1,10 +1,11 @@
 [
   {
-    "id": "20260607_235552",
+    "id": "20260607_235211",
+    "name": "dataset-my.json",
     "source": "irecommend.ru",
-    "product": "Праймер для ресниц Vivienne Sabo Cabaret Premiere",
+    "product_name": "Праймер для ресниц Vivienne Sabo Cabaret Premiere",
     "brand": "Vivienne Sabo",
-    "uploaded_at": "2026-06-07T23:55:52.839519",
+    "uploaded_at": "2026-06-07T23:52:11.798703",
     "reviews_count": 148
   }
 ]

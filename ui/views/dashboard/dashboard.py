@@ -6,50 +6,64 @@ from .sources import render_sources_view
 
 
 def render_dashboard():
-    # --- 1. БОКОВОЕ МЕНЮ ---
+    st.markdown("""
+            <style>
+            /* Убираем отступы у основного контейнера */
+            .st-emotion-cache-1w723zb {
+                max-width: 100%;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+    # --- БОКОВОЕ МЕНЮ ---
     with st.sidebar:
         st.title("💄 VS Analytics")
-        st.markdown(f"**Текущий отчет:**\n*{st.session_state.selected_product}*")
+
+        # Показываем выбранные датасеты
+        datasets = st.session_state.get("selected_datasets", [])
+        if datasets:
+            st.markdown("**Выбранные датасеты:**")
+            for ds in datasets:
+                st.caption(f"• {ds.brand} — {ds.product}")
+                st.caption(f"  ({ds.reviews_count} отзывов)")
         st.divider()
 
-        # Кнопки навигации с подсветкой активной
-        if st.button("Дашборд", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary"):
-            st.session_state.dashboard_tab = "📊 Дашборд"
+        # Навигация
+        if st.button(
+            "Дашборд",
+            use_container_width=True,
+            type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary",
+        ):
+            st.session_state.dashboard_tab = "Дашборд"
             st.rerun()
 
-        if st.button("Отзывы", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary"):
-            st.session_state.dashboard_tab = "📝 Отзывы"
-            st.rerun()
-
-        if st.button("Источники", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "Источники" else "secondary"):
-            st.session_state.dashboard_tab = "🔗 Источники"
+        if st.button(
+            "Отзывы",
+            use_container_width=True,
+            type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary",
+        ):
+            st.session_state.dashboard_tab = "Отзывы"
             st.rerun()
 
         st.divider()
+
         if st.button("На главную", type="secondary", use_container_width=True):
             st.session_state.page = "landing"
-            st.session_state.selected_product = ""
-            st.session_state.report_data = None
+            st.session_state.selected_datasets = []
+            st.session_state.dashboard_data = None
+            st.session_state.all_reviews = []
             st.rerun()
 
-    # --- 2. ОСНОВНОЙ КОНТЕНТ ---
-    if not st.session_state.report_data:
+    # --- ОСНОВНОЙ КОНТЕНТ ---
+    dashboard_data = st.session_state.get("dashboard_data")
+    all_reviews = st.session_state.get("all_reviews", [])
+
+    if not dashboard_data:
         st.warning("Нет данных для отображения.")
         return
 
-    # Распаковываем данные из кортежа
-    metrics, segments_df, trends_df, sources_list, reviews_list, ai_text = st.session_state.report_data
-    product_name = st.session_state.selected_product
-
-    # --- 3. РОУТИНГ ВНУТРИ ДАШБОРДА ---
-    if st.session_state.dashboard_tab == "📊 Дашборд":
-        render_metrics_view(metrics, segments_df, trends_df, ai_text, product_name)
-
-    elif st.session_state.dashboard_tab == "📝 Отзывы":
-        render_reviews_view(reviews_list, product_name)
-
-    elif st.session_state.dashboard_tab == "🔗 Источники":
-        render_sources_view(sources_list, product_name)
+    # Роутинг
+    if st.session_state.dashboard_tab == "Дашборд":
+        render_metrics_view(dashboard_data)
+    elif st.session_state.dashboard_tab == "Отзывы":
+        render_reviews_view(all_reviews)
