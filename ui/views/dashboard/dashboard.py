@@ -1,19 +1,17 @@
 import streamlit as st
-
 from .metrics import render_metrics_view
 from .reviews import render_reviews_view
-from .sources import render_sources_view
 
 
 def render_dashboard():
+    # --- CSS ДЛЯ УБРАНИЯ ОТСТУПОВ ---
     st.markdown("""
-            <style>
-            /* Убираем отступы у основного контейнера */
-            .st-emotion-cache-1w723zb {
-                max-width: 100%;
-            }
-            </style>
-        """, unsafe_allow_html=True)
+        <style>
+        .st-emotion-cache-1w723zb {
+            max-width: 100%;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     # --- БОКОВОЕ МЕНЮ ---
     with st.sidebar:
