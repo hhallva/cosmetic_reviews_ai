@@ -1,67 +1,126 @@
+from pathlib import Path
+
 import streamlit as st
+from datetime import datetime
+
 from .metrics import render_metrics_view
 from .reviews import render_reviews_view
+from app.services.dataset_manager import DatasetManager
+from app.services.analytics import AnalyticsService
 
+DATASETS_DIR = Path("data/datasets")
 
 def render_dashboard():
-    # --- CSS ДЛЯ УБРАНИЯ ОТСТУПОВ ---
-    st.markdown("""
-        <style>
-        .st-emotion-cache-1w723zb {
-            max-width: 100%;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    manager = DatasetManager(DATASETS_DIR)
+    brand = st.session_state.get("selected_brand")
+    product = st.session_state.get("selected_product")
+
+
+    if not brand or not product:
+        st.warning("Не выбран бренд или продукт.")
+        return
 
     # --- БОКОВОЕ МЕНЮ ---
     with st.sidebar:
-        st.title("💄 VS Analytics")
+        st.title("💄 Analytics")
+        st.markdown(f"**Бренд:** {brand}")
+        st.markdown(f"**Продукт:** {product}")
+        st.divider()
+        st.markdown("**📦 Датасеты:**")
+        datasets_meta = manager.get_datasets_by_product(brand, product)
 
-        # Показываем выбранные датасеты
-        datasets = st.session_state.get("selected_datasets", [])
-        if datasets:
-            st.markdown("**Выбранные датасеты:**")
-            for ds in datasets:
-                st.caption(f"• {ds.brand} — {ds.product}")
-                st.caption(f"  ({ds.reviews_count} отзывов)")
+        selected_datasets = []
+        for ds_meta in datasets_meta:
+            checked = st.checkbox(
+                f"{ds_meta.id} ({ds_meta.reviews_count} отзывов)",
+                value=True,
+                key=f"ds_{ds_meta.id}",
+            )
+            if checked:
+                selected_datasets.append(ds_meta.id)
+
         st.divider()
 
+        # Фильтр по датам
+        st.markdown("**📅 Фильтр по датам:**")
+        date_from = st.date_input("С", value=None)
+        date_to = st.date_input("По", value=None)
+
+        st.divider()
         # Навигация
-        if st.button(
-            "Дашборд",
-            use_container_width=True,
-            type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary",
-        ):
+        if st.button("Дашборд", use_container_width=True,
+                     type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary"):
             st.session_state.dashboard_tab = "Дашборд"
             st.rerun()
 
-        if st.button(
-            "Отзывы",
-            use_container_width=True,
-            type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary",
-        ):
+        if st.button("Отзывы", use_container_width=True,
+                     type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary"):
             st.session_state.dashboard_tab = "Отзывы"
             st.rerun()
 
         st.divider()
 
-        if st.button("На главную", type="secondary", use_container_width=True):
-            st.session_state.page = "landing"
-            st.session_state.selected_datasets = []
-            st.session_state.dashboard_data = None
-            st.session_state.all_reviews = []
+        if st.button("← К продуктам", use_container_width=True):
+            st.session_state.page = "brand_page"
             st.rerun()
 
-    # --- ОСНОВНОЙ КОНТЕНТ ---
-    dashboard_data = st.session_state.get("dashboard_data")
-    all_reviews = st.session_state.get("all_reviews", [])
+            # --- ОСНОВНОЙ КОНТЕНТ ---
+            # Загружаем выбранные датасеты
+        datasets = []
+        for ds_id in selected_datasets:
+            ds = manager.get_dataset(ds_id)
+            if ds:
+                datasets.append(ds)
 
-    if not dashboard_data:
-        st.warning("Нет данных для отображения.")
-        return
+        if not datasets:
+            st.warning("Нет выбранных датасетов для анализа.")
+            return
 
-    # Роутинг
-    if st.session_state.dashboard_tab == "Дашборд":
-        render_metrics_view(dashboard_data)
-    elif st.session_state.dashboard_tab == "Отзывы":
-        render_reviews_view(all_reviews)
+        # Применяем фильтр по датам
+        if date_from or date_to:
+            filtered_datasets = []
+            for ds in datasets:
+                filtered_reviews = []
+                for r in ds.reviews:
+                    if r.date:
+                        try:
+                            review_date = datetime.strptime(r.date, "%Y-%m-%d").date()
+                            if date_from and review_date < date_from:
+                                continue
+                            if date_to and review_date > date_to:
+                                continue
+                            filtered_reviews.append(r)
+                        except ValueError:
+                            continue
+
+                if filtered_reviews:
+                    from app.models.dataset import Dataset
+                    filtered_ds = Dataset(
+                        id=ds.id,
+                        brand=ds.brand,
+                        category=ds.category,
+                        product=ds.product,
+                        source=ds.source,
+                        uploaded_at=ds.uploaded_at,
+                        reviews=filtered_reviews,
+                    )
+                    filtered_datasets.append(filtered_ds)
+            datasets = filtered_datasets
+
+        if not datasets:
+            st.warning("Нет отзывов, соответствующих фильтрам.")
+            return
+
+        # Считаем аналитику
+        analytics = AnalyticsService(datasets)
+        dashboard_data = analytics.get_full_dashboard()
+
+        # Сохраняем в session_state
+        st.session_state.dashboard_data = dashboard_data
+        st.session_state.all_reviews = analytics.all_reviews
+
+        # Роутинг
+        if st.session_state.dashboard_tab == "Дашборд":
+            render_metrics_view(dashboard_data)
+        elif st.session_state.dashboard_tab == "Отзывы":
+            render_reviews_view(analytics.all_reviews)

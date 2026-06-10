@@ -3,18 +3,25 @@ from pathlib import Path
 
 from app.models.dataset import Dataset, Review
 
-
 class DatasetLoadError(Exception):
     pass
 
-
 class DatasetLoader:
     """
-    Работает ТОЛЬКО с единым форматом:
+    Принимает ВХОДНОЙ формат: просто массив отзывов
+    [
+        {"review_id": 1, "author": "...", "date": "...", ...},
+        ...
+    ]
+
+    Сохраняет в формат с метаданными:
     {
-        "source": "irecommend.ru",
-        "product": "Название продукта",
-        "brand": "Бренд",
+        "id": "...",
+        "brand": "...",
+        "category": "...",
+        "product": "...",
+        "source": "...",
+        "uploaded_at": "...",
         "reviews": [...]
     }
     """
@@ -25,7 +32,8 @@ class DatasetLoader:
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-    def load_from_file(self, file_path: str | Path) -> Dataset:
+    def load_reviews_from_file(self, file_path: str | Path) -> list[Review]:
+        """Загружает массив отзывов из JSON-файла."""
         file_path = Path(file_path)
         if not file_path.exists():
             raise DatasetLoadError(f"Файл не найден: {file_path}")
@@ -33,19 +41,23 @@ class DatasetLoader:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        return self._build(data)
+        # Ожидаем массив отзывов
+        if not isinstance(data, list):
+            raise DatasetLoadError("Ожидался массив отзывов (list)")
 
-    def load_from_dict(self, data: dict) -> Dataset:
-        return self._build(data)
+        return self._parse_reviews(data)
 
-    def save(self, dataset: Dataset) -> Path:
-        """Сохраняет в ТОМ ЖЕ формате, что и принимает."""
+    def save_dataset(self, dataset: Dataset) -> Path:
+        """Сохраняет датасет с метаданными."""
         file_path = self.storage_dir / f"{dataset.id}.json"
 
         data = {
-            "source": dataset.source,
-            "product": dataset.product,
+            "id": dataset.id,
             "brand": dataset.brand,
+            "category": dataset.category,
+            "product": dataset.product,
+            "source": dataset.source,
+            "uploaded_at": dataset.uploaded_at,
             "reviews": [r.model_dump() for r in dataset.reviews],
         }
 
@@ -54,15 +66,38 @@ class DatasetLoader:
 
         return file_path
 
-    def _build(self, data: dict) -> Dataset:
-        # Валидация ключей
-        missing = self.REQUIRED_KEYS - set(data.keys())
+    def load_dataset(self, file_path: str | Path) -> Dataset:
+        """Загружает сохранённый датасет (с метаданными)."""
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise DatasetLoadError(f"Файл не найден: {file_path}")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Валидация метаданных
+        required = {"id", "brand", "category", "product", "reviews"}
+        missing = required - set(data.keys())
         if missing:
             raise DatasetLoadError(f"Отсутствуют ключи: {missing}")
 
-        # Парсинг отзывов
+        reviews = self._parse_reviews(data["reviews"])
+
+        return Dataset(
+            id=data["id"],
+            brand=data["brand"],
+            category=data["category"],
+            product=data["product"],
+            source=data.get("source", "unknown"),
+            uploaded_at=data.get("uploaded_at", ""),
+            reviews=reviews,
+        )
+
+    @staticmethod
+    def _parse_reviews(reviews_data: list) -> list[Review]:
+        """Парсит массив отзывов."""
         reviews = []
-        for i, rev_data in enumerate(data["reviews"], start=1):
+        for i, rev_data in enumerate(reviews_data, start=1):
             try:
                 rev = Review(
                     review_id=rev_data.get("review_id", i),
@@ -82,9 +117,4 @@ class DatasetLoader:
         if not reviews:
             raise DatasetLoadError("В датасете нет валидных отзывов")
 
-        return Dataset(
-            source=str(data["source"]),
-            product=str(data["product"]),
-            brand=str(data["brand"]),
-            reviews=reviews,
-        )
+        return reviews

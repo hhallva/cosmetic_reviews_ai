@@ -15,11 +15,12 @@ class Review(BaseModel):
 
 
 class Dataset(BaseModel):
-    """Единый формат датасета — как на входе, так и на выходе."""
+    """Сохраняемый формат датасета"""
     id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S"))
-    source: str
-    product: str
+    source: str = "unknown"
     brand: str
+    category: str
+    product: str
     uploaded_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     reviews: list[Review] = Field(default_factory=list)
 
@@ -32,7 +33,25 @@ class DatasetMeta(BaseModel):
     """Метаданные для списка (без отзывов)."""
     id: str
     source: str
-    product: str
     brand: str
+    category: str
+    product: str
     uploaded_at: str
     reviews_count: int
+
+class BrandStats(BaseModel):
+    """Статистика по бренду для карточки."""
+    brand: str
+    datasets_count: int
+    categories_count: int
+    products_count: int
+    reviews_count: int
+
+
+class ProductStats(BaseModel):
+    """Статистика по продукту для карточки."""
+    product: str
+    category: str
+    datasets_count: int
+    reviews_count: int
+    avg_rating: float

@@ -1,9 +1,8 @@
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from app.models.dataset import Dataset, DatasetMeta
+from app.models.dataset import Dataset, DatasetMeta, BrandStats, ProductStats
 from app.services.dataset_loader import DatasetLoader
 
 
@@ -13,22 +12,31 @@ class DatasetManager:
         self.storage_dir = Path(storage_dir)
         self.meta_file = self.storage_dir / "datasets_meta.json"
 
-    def upload_dataset(self, file_path: str | Path, skip_duplicate: bool = True) -> DatasetMeta:
-        """Загружает датасет из файла. Если skip_duplicate — проверяет дубли."""
-        dataset = self.loader.load_from_file(file_path)
+    def upload_dataset(self,
+        reviews_file: str | Path,
+        brand: str,
+        category: str,
+        product: str,
+        source: str = "unknown",
+    ) -> DatasetMeta:
+        """Загружает датасет: принимает файл с отзывами + метаданные."""
+        reviews = self.loader.load_reviews_from_file(reviews_file)
 
-        if skip_duplicate:
-            existing = self.list_datasets()
-            for m in existing:
-                if m.product == dataset.product and m.brand == dataset.brand:
-                    print(f"⚠️ Датасет уже существует: [{m.id}] {m.brand} - {m.product}")
-                    return m
+        dataset = Dataset(
+            brand=brand,
+            category=category,
+            product=product,
+            source=source,
+            reviews=reviews,
+        )
 
-        self.loader.save(dataset)
+        self.loader.save_dataset(dataset)
         self._save_meta(dataset)
         return self._to_meta(dataset)
 
+
     def list_datasets(self) -> list[DatasetMeta]:
+        """Все датасеты."""
         if not self.meta_file.exists():
             return []
         with open(self.meta_file, "r", encoding="utf-8") as f:
@@ -36,12 +44,14 @@ class DatasetManager:
         return [DatasetMeta(**m) for m in metas]
 
     def get_dataset(self, dataset_id: str) -> Optional[Dataset]:
+        """Получить датасет по ID."""
         file_path = self.storage_dir / f"{dataset_id}.json"
         if not file_path.exists():
             return None
-        return self.loader.load_from_file(file_path)
+        return self.loader.load_dataset(file_path)
 
     def delete_dataset(self, dataset_id: str) -> bool:
+        """Удалить датасет."""
         file_path = self.storage_dir / f"{dataset_id}.json"
         if not file_path.exists():
             return False
@@ -49,24 +59,94 @@ class DatasetManager:
         self._remove_from_meta(dataset_id)
         return True
 
-    def get_by_period(self, from_date: str, to_date: str) -> list[DatasetMeta]:
-        from_dt = datetime.fromisoformat(from_date)
-        to_dt = datetime.fromisoformat(to_date)
+    def get_datasets_by_product(self, brand: str, product: str) -> list[DatasetMeta]:
+        """Все датасеты для конкретного продукта."""
         return [
             m for m in self.list_datasets()
-            if from_dt <= datetime.fromisoformat(m.uploaded_at) <= to_dt
+            if m.brand.lower() == brand.lower() and m.product.lower() == product.lower()
         ]
 
-    def get_by_brand(self, brand: str) -> list[DatasetMeta]:
+    def get_datasets_by_brand(self, brand: str) -> list[DatasetMeta]:
+        """Все датасеты бренда."""
         return [m for m in self.list_datasets() if m.brand.lower() == brand.lower()]
 
-    def get_multiple(self, dataset_ids: list[str]) -> list[Dataset]:
-        datasets = []
-        for ds_id in dataset_ids:
-            ds = self.get_dataset(ds_id)
-            if ds:
-                datasets.append(ds)
-        return datasets
+    def get_brands(self) -> list[BrandStats]:
+        """Статистика по всем брендам."""
+        datasets = self.list_datasets()
+        brands = {}
+
+        for ds in datasets:
+            if ds.brand not in brands:
+                brands[ds.brand] = {
+                    "datasets": set(),
+                    "categories": set(),
+                    "products": set(),
+                    "reviews": 0,
+                }
+            brands[ds.brand]["datasets"].add(ds.id)
+            brands[ds.brand]["categories"].add(ds.category)
+            brands[ds.brand]["products"].add(ds.product)
+            brands[ds.brand]["reviews"] += ds.reviews_count
+
+        return [
+            BrandStats(
+                brand=brand,
+                datasets_count=len(data["datasets"]),
+                categories_count=len(data["categories"]),
+                products_count=len(data["products"]),
+                reviews_count=data["reviews"],
+            )
+            for brand, data in brands.items()
+        ]
+
+    def get_products_by_brand(self, brand: str) -> list[ProductStats]:
+        """Статистика по продуктам бренда."""
+        datasets = self.get_datasets_by_brand(brand)
+        products = {}
+
+        for ds in datasets:
+            key = ds.product
+            if key not in products:
+                products[key] = {
+                    "category": ds.category,
+                    "datasets": set(),
+                    "reviews": 0,
+                    "ratings": [],
+                }
+            products[key]["datasets"].add(ds.id)
+            products[key]["reviews"] += ds.reviews_count
+
+            # Загружаем полный датасет для рейтинга
+            full_ds = self.get_dataset(ds.id)
+            if full_ds:
+                for r in full_ds.reviews:
+                    if r.rating is not None:
+                        products[key]["ratings"].append(r.rating)
+
+        result = []
+        for product, data in products.items():
+            if data["ratings"]:
+                ratings_sum = float(sum(data["ratings"]))  # Convert to float
+                ratings_len = len(data["ratings"])
+                avg_rating = round(ratings_sum / ratings_len, 2)
+            else:
+                avg_rating = 0
+            result.append(
+                ProductStats(
+                    product=product,
+                    category=data["category"],
+                    datasets_count=len(data["datasets"]),
+                    reviews_count=data["reviews"],
+                    avg_rating=avg_rating,
+                )
+            )
+
+        return result
+
+    def get_categories(self, brand: str) -> list[str]:
+        """Все категории бренда."""
+        datasets = self.get_datasets_by_brand(brand)
+        return sorted(set(ds.category for ds in datasets))
 
     def _save_meta(self, dataset: Dataset):
         metas = self.list_datasets()
@@ -79,13 +159,14 @@ class DatasetManager:
         metas = [m for m in self.list_datasets() if m.id != dataset_id]
         with open(self.meta_file, "w", encoding="utf-8") as f:
             json.dump([m.model_dump() for m in metas], f, ensure_ascii=False, indent=2)
-
-    def _to_meta(self, dataset: Dataset) -> DatasetMeta:
+    @staticmethod
+    def _to_meta(dataset: Dataset) -> DatasetMeta:
         return DatasetMeta(
             id=dataset.id,
-            source=dataset.source,
-            product=dataset.product,
             brand=dataset.brand,
+            category=dataset.category,
+            product=dataset.product,
+            source=dataset.source,
             uploaded_at=dataset.uploaded_at,
             reviews_count=dataset.reviews_count,
         )
