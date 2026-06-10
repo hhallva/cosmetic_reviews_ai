@@ -11,29 +11,6 @@
         }
 
         /* Карточки брендов — нормальный размер */
-        .brand-card {
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-        }
-        .brand-card:hover {
-        }
-
-        .brand-card h3 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 1.2rem;
-            padding-bottom: 8px;
-        }
-        .brand-card .stats {
-            font-size: 0.95rem;
-            line-height: 1.8;
-        }
-        .brand-card .stats strong {
-            font-size: 1.1rem;
-        }
-
-
 
 /* Большой заголовок */
 .main-title {

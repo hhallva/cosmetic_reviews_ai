@@ -1,0 +1,16 @@
+.block-container {
+    max-width: 90% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}
+
+/* Убираем ограничение ширины у app container */
+.stApp {
+    max-width: 100%;
+}
+
+.main-title {
+    font-size: 4rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em;
+}

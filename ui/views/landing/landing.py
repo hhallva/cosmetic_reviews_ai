@@ -1,14 +1,8 @@
-# app/ui/views/landing.py
 from pathlib import Path
 
 import streamlit as st
 
 from viewmodels.landing_vm import MANUAL_INPUT, LandingViewModel
-
-
-def on_brand_click(brand_name: str):
-    st.session_state.selected_brand = brand_name
-    st.session_state.page = "brand_page"
 
 def render_landing(vm: LandingViewModel):
     css_file = Path(__file__).parent / "landing.css"
@@ -16,8 +10,8 @@ def render_landing(vm: LandingViewModel):
         with open(css_file, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    st.markdown('<h1 class="main-title">Reviews Analytics</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="subtitle">Анализ датасетов отзывов</p>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">Reviews Analytics</h1>', text_alignment="center", unsafe_allow_html=True)
+    st.markdown('<p class="subtitle">Анализ датасетов отзывов</p>', text_alignment="center", unsafe_allow_html=True)
 
     if vm.error:
         st.error(vm.error)
@@ -146,6 +140,6 @@ def render_landing(vm: LandingViewModel):
                         "🔍 Подробнее",
                         key=f"brand_{brand_stats.brand}",
                         use_container_width=True,
-                        on_click=on_brand_click,
-                        args=(brand_stats.brand,),
+                        on_click=vm.on_brand_click,
+                        args=(brand_stats.brand,)
                     )

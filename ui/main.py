@@ -6,26 +6,43 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
-from ui.views.brand_page import render_brand_page
-from ui.views.dashboard.dashboard import render_dashboard
 
+from ui.views.dashboard.dashboard import render_dashboard
+from viewmodels.brand_page_vm import BrandPageViewModel
+from views.brand.brand_page import render_brand_page
 from viewmodels.landing_vm import LandingViewModel
-from ui.views.landing import render_landing
+from views.landing.landing import render_landing
+
+
+def init_state():
+    if "page" not in st.session_state:
+        st.session_state.page = "landing"
+    if "dashboard_tab" not in st.session_state:
+        st.session_state.dashboard_tab = "Дашборд"
+    if "selected_brand" not in st.session_state:
+        st.session_state.selected_brand = None
+    if "selected_product" not in st.session_state:
+        st.session_state.selected_product = None
+    if "selected_datasets" not in st.session_state:
+        st.session_state.selected_datasets = []
 
 
 def main():
-    if "page" not in st.session_state:
-        st.session_state.page = "landing"
-
-    if "dashboard_tab" not in st.session_state:
-        st.session_state.dashboard_tab = "Дашборд"
+    init_state()
 
     if st.session_state.page == "landing":
         vm = LandingViewModel()
         render_landing(vm)
 
     elif st.session_state.page == "brand_page":
-        render_brand_page()
+        brand = st.session_state.get("selected_brand")
+        if brand:
+            vm = BrandPageViewModel(brand)
+            render_brand_page(vm)
+        else:
+            st.session_state.page = "landing"
+            st.rerun()
+
     elif st.session_state.page == "dashboard":
         render_dashboard()
 
