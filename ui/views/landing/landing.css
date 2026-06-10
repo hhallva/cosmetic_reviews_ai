@@ -1,16 +1,15 @@
 /* Растягиваем основной контейнер на всю ширину */
-        .block-container {
-            max-width: 90% !important;
-            padding-left: 2rem !important;
-            padding-right: 2rem !important;
-        }
+.block-container {
+    max-width: 90% !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+}
 
-        /* Убираем ограничение ширины у app container */
-        .stApp {
-            max-width: 100%;
-        }
+/* Убираем ограничение ширины у app container */
+.stApp {
+    max-width: 100%;
+}
 
-        /* Карточки брендов — нормальный размер */
 
 /* Большой заголовок */
 .main-title {

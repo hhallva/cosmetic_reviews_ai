@@ -1,12 +1,14 @@
 import sys
 from pathlib import Path
 
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import streamlit as st
 
+from viewmodels.dashboard.dashboard_vm import DashboardViewModel
 from ui.views.dashboard.dashboard import render_dashboard
 from viewmodels.brand_page_vm import BrandPageViewModel
 from views.brand.brand_page import render_brand_page
@@ -44,7 +46,11 @@ def main():
             st.rerun()
 
     elif st.session_state.page == "dashboard":
-        render_dashboard()
+        vm = DashboardViewModel(
+            brand=st.session_state.get("selected_brand"),
+            product=st.session_state.get("selected_product")
+        )
+        render_dashboard(vm)
 
 
 if __name__ == "__main__":

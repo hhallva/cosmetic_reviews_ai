@@ -1,126 +1,90 @@
+# app/ui/views/dashboard/dashboard.py
 from pathlib import Path
 
 import streamlit as st
-from datetime import datetime
 
-from .metrics import render_metrics_view
-from .reviews import render_reviews_view
-from app.services.dataset_manager import DatasetManager
-from app.services.analytics import AnalyticsService
-
-DATASETS_DIR = Path("data/datasets")
-
-def render_dashboard():
-    manager = DatasetManager(DATASETS_DIR)
-    brand = st.session_state.get("selected_brand")
-    product = st.session_state.get("selected_product")
+from viewmodels.dashboard.dashboard_vm import DashboardViewModel
+from views.dashboard.metrics.metrics import render_metrics_view
+from views.dashboard.reviews.reviews import render_reviews_view
+from views.dashboard.sources.sources import render_sources_view
 
 
-    if not brand or not product:
-        st.warning("Не выбран бренд или продукт.")
+def render_dashboard(vm: DashboardViewModel):
+    css_file = Path(__file__).parent / "dashboard.css"
+    if css_file.exists():
+        with open(css_file, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+    st.sidebar.title(vm.brand)
+    st.sidebar.text(f"Продукт: {vm.product}")
+
+    st.sidebar.divider()
+
+    st.sidebar.text("Фильтр по датам", help="Укажите диапазон дат для отзывов, для анализа периодов.")
+
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        date_from = st.date_input("Начальная дата", value=None, key="dashboard_date_from")
+    with col2:
+        date_to = st.date_input("Конечная дата", value=None, key="dashboard_date_to")
+    vm.set_dates(date_from, date_to)
+
+    st.sidebar.divider()
+
+    st.sidebar.text("Датасеты")
+    selected_ids = []
+    for ds_meta in vm.get_available_datasets():
+        checked = st.sidebar.checkbox(
+            f"{ds_meta.id} ({ds_meta.reviews_count} отзывов)",
+            value=ds_meta.id in vm.selected_dataset_ids,
+            key=f"ds_{ds_meta.id}",
+        )
+        if checked:
+            selected_ids.append(ds_meta.id)
+    vm.set_selected_datasets(selected_ids)
+
+    st.sidebar.divider()
+    if st.sidebar.button(
+        "Дашборд",
+        use_container_width=True,
+        type="primary" if vm.dashboard_tab == "Дашборд" else "secondary",
+    ):
+        vm.set_tab("Дашборд")
+        st.rerun()
+
+    if st.sidebar.button(
+        "Отзывы",
+        use_container_width=True,
+        type="primary" if vm.dashboard_tab == "Отзывы" else "secondary",
+    ):
+        vm.set_tab("Отзывы")
+        st.rerun()
+
+    if st.sidebar.button(
+        "Источники",
+        use_container_width=True,
+        type="primary" if vm.dashboard_tab == "Источники" else "secondary",
+    ):
+        vm.set_tab("Источники")
+        st.rerun()
+
+    st.sidebar.divider()
+    if st.sidebar.button("← К продуктам", use_container_width=True):
+        st.session_state.page = "brand_page"
+        st.rerun()
+
+    dashboard_data, all_reviews = vm.get_dashboard_data()
+    if not dashboard_data:
+        st.warning("Нет данных для отображения.")
         return
 
-    # --- БОКОВОЕ МЕНЮ ---
-    with st.sidebar:
-        st.title("💄 Analytics")
-        st.markdown(f"**Бренд:** {brand}")
-        st.markdown(f"**Продукт:** {product}")
-        st.divider()
-        st.markdown("**📦 Датасеты:**")
-        datasets_meta = manager.get_datasets_by_product(brand, product)
-
-        selected_datasets = []
-        for ds_meta in datasets_meta:
-            checked = st.checkbox(
-                f"{ds_meta.id} ({ds_meta.reviews_count} отзывов)",
-                value=True,
-                key=f"ds_{ds_meta.id}",
-            )
-            if checked:
-                selected_datasets.append(ds_meta.id)
-
-        st.divider()
-
-        # Фильтр по датам
-        st.markdown("**📅 Фильтр по датам:**")
-        date_from = st.date_input("С", value=None)
-        date_to = st.date_input("По", value=None)
-
-        st.divider()
-        # Навигация
-        if st.button("Дашборд", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "Дашборд" else "secondary"):
-            st.session_state.dashboard_tab = "Дашборд"
-            st.rerun()
-
-        if st.button("Отзывы", use_container_width=True,
-                     type="primary" if st.session_state.dashboard_tab == "Отзывы" else "secondary"):
-            st.session_state.dashboard_tab = "Отзывы"
-            st.rerun()
-
-        st.divider()
-
-        if st.button("← К продуктам", use_container_width=True):
-            st.session_state.page = "brand_page"
-            st.rerun()
-
-            # --- ОСНОВНОЙ КОНТЕНТ ---
-            # Загружаем выбранные датасеты
-        datasets = []
-        for ds_id in selected_datasets:
-            ds = manager.get_dataset(ds_id)
-            if ds:
-                datasets.append(ds)
-
-        if not datasets:
-            st.warning("Нет выбранных датасетов для анализа.")
-            return
-
-        # Применяем фильтр по датам
-        if date_from or date_to:
-            filtered_datasets = []
-            for ds in datasets:
-                filtered_reviews = []
-                for r in ds.reviews:
-                    if r.date:
-                        try:
-                            review_date = datetime.strptime(r.date, "%Y-%m-%d").date()
-                            if date_from and review_date < date_from:
-                                continue
-                            if date_to and review_date > date_to:
-                                continue
-                            filtered_reviews.append(r)
-                        except ValueError:
-                            continue
-
-                if filtered_reviews:
-                    from app.models.dataset import Dataset
-                    filtered_ds = Dataset(
-                        id=ds.id,
-                        brand=ds.brand,
-                        category=ds.category,
-                        product=ds.product,
-                        source=ds.source,
-                        uploaded_at=ds.uploaded_at,
-                        reviews=filtered_reviews,
-                    )
-                    filtered_datasets.append(filtered_ds)
-            datasets = filtered_datasets
-
-        if not datasets:
-            st.warning("Нет отзывов, соответствующих фильтрам.")
-            return
-
-        # Считаем аналитику
-        analytics = AnalyticsService(datasets)
-        dashboard_data = analytics.get_full_dashboard()
-
-        # Сохраняем в session_state
-        st.session_state.dashboard_data = dashboard_data
-        st.session_state.all_reviews = analytics.all_reviews
-
-        # Роутинг
-        if st.session_state.dashboard_tab == "Дашборд":
-            render_metrics_view(dashboard_data)
-        elif st.session_state.dashboard_tab == "Отзывы":
-            render_reviews_view(analytics.all_reviews)
+    if vm.dashboard_tab == "Дашборд":
+        render_metrics_view(dashboard_data, all_reviews)
+    elif vm.dashboard_tab == "Отзывы":
+        render_reviews_view(all_reviews)
+    elif vm.dashboard_tab == "Источники":
+        sources = [
+            {"name": src, "count": count, "url": "#"}
+            for src, count in dashboard_data["sources"].items()
+        ]
+        render_sources_view(sources, vm.product)

@@ -1,3 +1,5 @@
+#views/dasboard/sourses.py
+
 import streamlit as st
 
 def render_sources_view(sources_list: list, product_name: str):
