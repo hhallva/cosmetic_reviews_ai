@@ -61,7 +61,6 @@ def render_dashboard(vm: DashboardViewModel):
                     expanded=False,
                     key=f"expander_{source_name}"
             ):
-
                 for ds_meta in datasets:
                     row1, row2 = st.columns([5, 1])
 
