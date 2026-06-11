@@ -12,9 +12,6 @@ def render_metrics_view(data: dict, all_reviews: dict):
         with open(css_file, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-    st.header("Аналитика датасетов")
-    st.divider()
-
     kpi1, kpi2, kpi3, kpi4, kpi5, kpi6= st.columns(6)
 
     with kpi1:

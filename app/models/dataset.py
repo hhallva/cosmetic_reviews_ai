@@ -17,7 +17,7 @@ class Review(BaseModel):
 class Dataset(BaseModel):
     """Сохраняемый формат датасета"""
     id: str = Field(default_factory=lambda: datetime.now().strftime("%Y%m%d_%H%M%S"))
-    source: str = "unknown"
+    source: str
     brand: str
     category: str
     product: str
