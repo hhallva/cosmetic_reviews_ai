@@ -36,38 +36,30 @@ def render_reviews_view(reviews_list: list):
             continue
         filtered.append(rev)
 
-    st.markdown(f"Показано отзывов: **{len(filtered)}** из {len(reviews_list)}")
+    st.text(f"Показано отзывов: {len(filtered)} из {len(reviews_list)}")
     st.divider()
 
     for rev in filtered:
-        stars = "⭐" * (rev.rating or 0) + "☆" * (5 - (rev.rating or 0))
-        rating_label = f"{rev.rating}/5" if rev.rating else "Без оценки"
+        stars = "⭐" * (rev.rating or 0)
         pros_str = ", ".join(rev.pros) if rev.pros else "нет"
         cons_str = ", ".join(rev.cons) if rev.cons else "нет"
 
         with st.container(border=True):
-            st.markdown(
-                f"""
-                        <div class="review-card">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <div>
-                                    <strong>👤 {rev.author}</strong>
-                                    <span style="color:#6c757d; font-size:0.85rem; margin-left:10px;">{rev.date}</span>
-                                </div>
-                                <span>{stars} <small>({rating_label})</small></span>
-                            </div>
-                            <div style="font-weight:bold; margin-bottom:6px;">{rev.title}</div>
-                            <div font-size:0.95rem; line-height:1.5; margin-bottom:10px;">
-                                {rev.text}
-                            </div>
-                            <div style="font-size:0.85rem;">
-                                <span style="color:#28a745;">✅ {pros_str}</span><br>
-                                <span style="color:#dc3545;">❌ {cons_str}</span>
-                            </div>
-                        </div>
-                        """,
-                unsafe_allow_html=True,
-            )
+            col_author, col_stars = st.columns([3, 1])
+
+
+            with col_author:
+                st.text(f"{rev.author}      {rev.date}")
+            with col_stars:
+                st.text(f"{stars}", width="stretch", text_alignment="right")
+
+            if rev.title:
+                st.subheader(f"{rev.title}")
+            st.text(rev.text)
+
+            st.text(f"✅ Плюсы: {pros_str}")
+            st.text(f"❌ Минусы: {cons_str}")
+
 
 
 
