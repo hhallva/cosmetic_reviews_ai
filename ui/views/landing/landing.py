@@ -127,7 +127,7 @@ def render_landing(vm: LandingViewModel):
         cols = st.columns(3)
         for idx, brand_stats in enumerate(brands):
             with cols[idx % 3]:
-                with st.container(border=True):
+                with st.container(border=True, height="stretch"):
                     st.subheader(brand_stats.brand)
                     c1, c2 = st.columns(2)
                     with c1:

@@ -19,6 +19,15 @@ class BrandPageViewModel:
         self.selected_category = "Все"
         self.search = ""
 
+    def get_ranked_products(self, mode: str = "best"):
+        products = self.get_products()
+
+        if mode == "best":
+            return sorted(products, key=lambda p: p.avg_rating, reverse=True)
+        if mode == "worst":
+            return sorted(products, key=lambda p: p.avg_rating)
+        return products
+
     def get_products(self):
         products = self.manager.get_products_by_brand(self.brand)
 

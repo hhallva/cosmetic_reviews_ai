@@ -116,6 +116,7 @@ class LandingViewModel:
             if tmp_path.exists():
                tmp_path.unlink()
 
-    def on_brand_click(self, brand_name: str):
+    @staticmethod
+    def on_brand_click(brand_name: str):
         st.session_state.selected_brand = brand_name
         st.session_state.page = "brand_page"

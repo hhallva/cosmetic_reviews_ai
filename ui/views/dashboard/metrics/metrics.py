@@ -18,8 +18,13 @@ def render_metrics_view(data: dict, all_reviews: dict):
         st.metric("Всего отзывов", data["total_reviews"])
     with kpi2:
         sentiment_score = data["sentiment_score"]
-        delta = f"{sentiment_score:+.1f}%" if sentiment_score != 0 else "0%"
-        st.metric("Sentiment Score", f"{sentiment_score:+.1f}%", delta=delta)
+        value_str = f"{sentiment_score:+.1f}%" if sentiment_score < 0 else f"{sentiment_score:-.1f}%"
+        st.metric(
+            label="Sentiment Score",
+            value=value_str,
+            # delta=delta_str, # Раскомментируйте, если есть данные для сравнения
+            # delta_color="normal" # "normal" (зеленый вверх/красный вниз) или "inverse" (красный вверх/зеленый вниз)
+        )
     with kpi3:
         sent_dist = data["sentiment_dist"]
         st.metric("Позитивные", f"{sent_dist['positive_pct']}%")
@@ -31,10 +36,10 @@ def render_metrics_view(data: dict, all_reviews: dict):
         st.metric("Индекс жалоб", f"{data['problems_index']}")
 
 
-    st.markdown('<div class="section-header">Распределение отзывов по тональности</div>', unsafe_allow_html=True)
-    chart_col1, chart_col2 = st.columns(2)
+    chart_col1, chart_col2 = st.columns(2, vertical_alignment="center")
 
     with chart_col1:
+        st.text("Распределение отзывов по тональности")
         sent_dist = data["sentiment_dist"]
         labels = ["Позитивные", "Нейтральные", "Негативные"]
         values = [sent_dist["positive"], sent_dist["neutral"], sent_dist["negative"]]
@@ -53,13 +58,13 @@ def render_metrics_view(data: dict, all_reviews: dict):
             text=[rating_dist.get(i, 0) for i in range(1, 6)],
             textposition="outside",
         )])
-        fig_bar.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=300, title="Распределение рейтингов")
+        fig_bar.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=300)
         st.plotly_chart(fig_bar, use_container_width=True)
 
     if data["reviews_over_time"]:
-        st.markdown('<div class="section-header">Динамика отзывов по времени</div>', unsafe_allow_html=True)
+        st.text("Количество отзывов по месяцам")
         df_time = pd.DataFrame(data["reviews_over_time"])
         df_time["month"] = pd.to_datetime(df_time["month"])
-        fig_line = px.line(df_time, x="month", y="count", markers=True, title="Количество отзывов по месяцам")
+        fig_line = px.line(df_time, x="month", y="count", markers=True)
         fig_line.update_layout(margin=dict(t=30, b=0, l=0, r=0), height=300)
         st.plotly_chart(fig_line, use_container_width=True)
