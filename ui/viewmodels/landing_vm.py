@@ -106,7 +106,7 @@ class LandingViewModel:
             st.session_state.selected_brand = meta.brand
             st.session_state.selected_product = meta.product
             st.session_state.page = "dashboard"
-            st.session_state.dashboard_tab = "📊 Дашборд"
+            st.session_state.dashboard_tab = "Дашборд"
 
             return meta
         except Exception as e:
