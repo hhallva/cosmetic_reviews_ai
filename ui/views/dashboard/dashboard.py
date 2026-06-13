@@ -14,6 +14,9 @@ def render_dashboard(vm: DashboardViewModel):
         with open(css_file, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+    if "dialog_delete_id" not in st.session_state:
+        st.session_state.dialog_delete_id = None
+
     with st.sidebar:
         st.title(vm.brand)
         st.text(f"Продукт: {vm.product}")
@@ -62,34 +65,29 @@ def render_dashboard(vm: DashboardViewModel):
                     key=f"expander_{source_name}"
             ):
                 for ds_meta in datasets:
-                    row1, row2 = st.columns([5, 1])
+                    col1, col2, col3 = st.columns([0.7, 0.1, 0.2])
 
-                    with row1:
+                    with col1:
                         checked = st.checkbox(
-                            f"{ds_meta.id} ({ds_meta.reviews_count} отзывов)",
+                            f"{ds_meta.id}",
                             value=ds_meta.id in vm.selected_dataset_ids,
                             key=f"ds_{ds_meta.id}",
                         )
 
-                    with row2:
-                        if st.button("🗑️", key=f"delete_{ds_meta.id}", help="Удалить датасет"):
-                            st.session_state[f"confirm_delete_{ds_meta.id}"] = True
+                    with col2:
+                        # Можно добавить информационную иконку
+                        if ds_meta.reviews_count > 0:
+                            st.caption(f"📝 {ds_meta.reviews_count}")
 
-                    if st.session_state.get(f"confirm_delete_{ds_meta.id}", False):
-                        st.warning(f"Удалить датасет {ds_meta.id}?")
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            if st.button("Да", key=f"confirm_yes_{ds_meta.id}"):
-                                vm.delete_dataset(ds_meta.id)
-                                st.session_state[f"confirm_delete_{ds_meta.id}"] = False
-                                st.rerun()
-                        with c2:
-                            if st.button("Нет", key=f"confirm_no_{ds_meta.id}"):
-                                st.session_state[f"confirm_delete_{ds_meta.id}"] = False
-                                st.rerun()
+                    with col3:
+                        # Кнопка удаления открывает диалог
+                        if st.button("🗑️", key=f"delete_{ds_meta.id}", help="Удалить датасет"):
+                            st.session_state.dialog_delete_id = ds_meta.id
+                            st.rerun()
 
                     if checked:
                         selected_ids.append(ds_meta.id)
+
 
         vm.set_selected_datasets(selected_ids)
 
@@ -119,6 +117,34 @@ def render_dashboard(vm: DashboardViewModel):
     if not dashboard_data:
         st.warning("Нет данных для отображения.")
         return
+
+    if st.session_state.dialog_delete_id:
+        ds_id_to_delete = st.session_state.dialog_delete_id
+
+        # Находим датасет для отображения информации из сохраненного списка
+        ds_to_delete = next((ds for ds in vm.get_datasets() if ds.id == ds_id_to_delete), None)
+
+        if ds_to_delete:
+            @st.dialog(f"Удаление датасета", width="small")
+            def confirm_delete_dialog():
+                st.warning(f"Вы действительно хотите удалить датасет **{ds_to_delete.id}**?")
+                st.caption(f"{ds_to_delete.reviews_count} отзывов")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Да, удалить", type="primary", use_container_width=True):
+                        vm.delete_dataset(ds_id_to_delete)
+                        st.session_state.dialog_delete_id = None
+                        # Очищаем кэш датасетов
+                        st.session_state.datasets_list = []
+                        st.rerun()
+                with col2:
+                    if st.button("Отмена", use_container_width=True):
+                        st.session_state.dialog_delete_id = None
+                        st.rerun()
+
+            confirm_delete_dialog()
+
 
     if vm.dashboard_tab == "Дашборд":
         render_metrics_view(dashboard_data, all_reviews)

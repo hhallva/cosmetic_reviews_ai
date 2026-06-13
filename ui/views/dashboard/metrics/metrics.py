@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 
-from app.services.kpi.ai_analyzer import analyze_with_Yandex
+from app.services.ai_analyzer import analyze_with_Yandex
 
 
 def render_metrics_view(data: dict, all_reviews: dict):
@@ -15,29 +15,47 @@ def render_metrics_view(data: dict, all_reviews: dict):
         with open(css_file, "r", encoding="utf-8") as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+    demand_index = data['demand_index']
+    if demand_index >= 70:
+        color = "#28a745"
+        level = "Высокий"
+    elif demand_index >= 40:
+        color = "#ffc107"
+        level = "Средний"
+    else:
+        color = "#dc3545"
+        level = "Низкий"
+
+    st.markdown(f"""
+                <div style='text-align: center; padding: 5px'>
+                    <div style='font-size: 14px; font-weight: 500; margin-bottom: 10px;'>Индекс спроса</div>
+                    <div style='position: relative; width: 100%; background: #b1b9c1; border-radius: 20px; height: 30px; overflow: hidden;'>
+                        <div style='position: absolute; left: 0; top: 0; width: {demand_index}%; background: {color}; height: 100%; transition: width 0.3s ease;'></div>
+                        <div style='position: relative; line-height: 30px; color: {'white' if demand_index > 50 else 'black'}; font-weight: 600; z-index: 1;'>
+                            {demand_index}% — {level}
+                        </div>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+
     with st.container(border=True):
-        kpi1, kpi2, kpi3, kpi4, kpi5, kpi6, kpi7 = st.columns(7)
+        kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
 
         with kpi1:
             st.metric("Всего отзывов", data["total_reviews"])
         with kpi2:
-            sentiment_score = data["sentiment_score"]
-            value_str = f"{sentiment_score:+.1f}%" if sentiment_score < 0 else f"{sentiment_score:-.1f}%"
-            st.metric(
-                label="Sentiment Score",
-                value=value_str,
-            )
-        with kpi3:
             sent_dist = data["sentiment_dist"]
             st.metric("Позитивные", f"{sent_dist['positive_pct']}%")
+        with kpi3:
+            st.metric("Негативные", f"{sent_dist['negative_pct']}%")
         with kpi4:
-            st.metric("Негативные", f"{sent_dist['negative_pct']}%", delta_color="inverse")
+            # Используем средний сентимент вместо звездного рейтинга
+            avg_sentiment = data.get("avg_sentiment", 0.0)
+            st.metric("Средний сентимент", f"{avg_sentiment:.2f}")
         with kpi5:
-            st.metric("Средний рейтинг", f"{data['avg_rating']}/5.0")
-        with kpi6:
             st.metric("Индекс жалоб", f"{data['problems_index']}")
-        with kpi7:
-            st.metric("Индекс спроса", f"{data['demand_index']}")
+
+
 
     chart_col1, chart_col2 = st.columns(2, vertical_alignment="center")
 
@@ -52,17 +70,44 @@ def render_metrics_view(data: dict, all_reviews: dict):
         st.plotly_chart(fig_donut, use_container_width=True)
 
     with chart_col2:
-        ratings = [r.rating for r in all_reviews if r.rating is not None]
-        rating_dist = {i: ratings.count(i) for i in range(1, 6)}
-        fig_bar = go.Figure(data=[go.Bar(
-            x=[str(i) for i in range(1, 6)],
-            y=[rating_dist.get(i, 0) for i in range(1, 6)],
-            marker_color=["#dc3545", "#fd7e14", "#ffc107", "#20c997", "#28a745"],
-            text=[rating_dist.get(i, 0) for i in range(1, 6)],
-            textposition="outside",
-        )])
-        fig_bar.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=300)
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.text("Индекс тональности")
+        sentiment_score = data["sentiment_score"]
+
+        # Создаем gauge chart такого же размера как пончик
+        fig_gauge = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=sentiment_score,
+            domain={"x": [0, 1], "y": [0, 1]},
+            gauge={
+                "axis": {"range": [-100, 100], "tickwidth": 1, "tickcolor": "darkgray",
+                         "tickvals": [-100, -50, 0, 50, 100]},
+                "bar": {"color": "white"},
+                "steps": [
+                    {"range": [-100, -60], "color": "#8B0000"},
+                    {"range": [-60, -20], "color": "#DC143C"},
+                    {"range": [-20, 0], "color": "#FF6B6B"},
+                    {"range": [0, 20], "color": "#90EE90"},
+                    {"range": [20, 60], "color": "#32CD32"},
+                    {"range": [60, 100], "color": "#006400"},
+                ],
+                "threshold": {
+                    "line": {"color": "black", "width": 2},
+                    "thickness": 0.75,
+                    "value": sentiment_score,
+                },
+            },
+            number={
+                "suffix": "%",
+                "font": {"size": 28, "color": "#FF4B4B" if sentiment_score < 0 else "#4CAF50"}
+            },
+        ))
+
+        fig_gauge.update_layout(
+            height=300,  # Такая же высота как у пончика
+            margin=dict(t=40, b=20, l=20, r=20)
+        )
+
+        st.plotly_chart(fig_gauge, use_container_width=True)
 
     if data["reviews_over_time"]:
         st.text("Количество отзывов по месяцам")
@@ -90,11 +135,11 @@ def render_metrics_view(data: dict, all_reviews: dict):
 
         with col_left:
             with st.container(border=True):
-                st.markdown("### Ключевые боли")
+                st.markdown("### Слабые стороны")
                 pain_points = analysis.get("pain_points", [])
 
                 if not pain_points:
-                    st.caption("Боли не выявлены")
+                    st.caption("Слабых сторон не выявлено")
                 else:
                     for pain in pain_points:
                         frequency = (pain.get("frequency", "") or "").lower()

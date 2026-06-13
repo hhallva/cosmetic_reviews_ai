@@ -89,7 +89,7 @@ def render_brand_page(vm: BrandPageViewModel):
         cols = st.columns(3)
         for idx, product_stats in enumerate(products):
             with cols[idx % 3]:
-                with st.container(border=True, height="stretch"):
+                with st.container(border=True):
                     stars = "⭐" * int(product_stats.avg_rating) + "☆" * (5 - int(product_stats.avg_rating))
 
                     st.subheader(product_stats.product)

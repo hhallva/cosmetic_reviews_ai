@@ -1,3 +1,5 @@
+# app/services/kpi/sentiment_score_kpi.py
+import numpy as np
 from app.models.dataset import Dataset
 
 
@@ -12,24 +14,24 @@ class SentimentScoreKPI:
     @staticmethod
     def calculate(datasets: list[Dataset]) -> float:
         """Возвращает Sentiment Score от -100% до +100%."""
-        positive = 0
-        negative = 0
-        total_rated = 0
-
+        # Собираем все рейтинги в NumPy массив
+        ratings = []
         for ds in datasets:
-            reviews = ds.reviews or []
-            for r in reviews:
-                if r.rating is None:
-                    continue
+            for r in ds.reviews:
+                if r.rating is not None:
+                    ratings.append(r.rating)
 
-                total_rated += 1
-                if r.rating >= 4:
-                    positive += 1
-                elif r.rating <= 2:
-                    negative += 1
-
-        if total_rated == 0:
+        if not ratings:
             return 0.0
 
+        ratings_array = np.array(ratings)
+
+        # Векторизованный подсчет
+        positive = np.sum(ratings_array >= 4)
+        negative = np.sum(ratings_array <= 2)
+        total_rated = len(ratings_array)
+
+        # Расчет скора
         score = (positive - negative) / total_rated * 100
-        return round(score, 1)
+
+        return round(float(score), 1)

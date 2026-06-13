@@ -1,5 +1,7 @@
-from app.models.dataset import Dataset
+from collections import defaultdict
 
+from app.models.dataset import Dataset
+import numpy as np
 
 class BestSegmentKPI:
     """
@@ -24,25 +26,28 @@ class BestSegmentKPI:
 
         # Группируем по бренду
         brand_stats = {}
+
+        brand_ratings = defaultdict(list)
+        brand_positive_counts = defaultdict(int)
+        brand_total_counts = defaultdict(int)
+
         for ds in datasets:
-            brand = ds.brand
-            if brand not in brand_stats:
-                brand_stats[brand] = {"ratings": [], "positive": 0, "total": 0}
+            ratings = [r.rating for r in ds.reviews if r.rating is not None]
+            if ratings:
+                # NumPy массив для этого датасета
+                ratings_array = np.array(ratings)
+                brand_ratings[ds.brand].extend(ratings)
+                brand_positive_counts[ds.brand] += np.sum(ratings_array >= 4)
+                brand_total_counts[ds.brand] += len(ratings)
 
-            for r in ds.reviews:
-                if r.rating is not None:
-                    brand_stats[brand]["ratings"].append(r.rating)
-                    brand_stats[brand]["total"] += 1
-                    if r.rating >= 4:
-                        brand_stats[brand]["positive"] += 1
-
-        # Находим лучший бренд по среднему рейтингу
         best_brand = None
         best_avg = 0
+        brand_avg_dict = {}
 
-        for brand, stats in brand_stats.items():
-            if stats["ratings"]:
-                avg = sum(stats["ratings"]) / len(stats["ratings"])
+        for brand, ratings in brand_ratings.items():
+            if ratings:
+                avg = np.mean(ratings)
+                brand_avg_dict[brand] = avg
                 if avg > best_avg:
                     best_avg = avg
                     best_brand = brand
@@ -50,25 +55,31 @@ class BestSegmentKPI:
         if not best_brand:
             return {"brand": "N/A", "product": "N/A", "avg_rating": 0, "positive_pct": 0}
 
-        stats = brand_stats[best_brand]
-        positive_pct = round(stats["positive"] / stats["total"] * 100, 1) if stats["total"] > 0 else 0
+        total_reviews = brand_total_counts[best_brand]
+        positive_pct = round(brand_positive_counts[best_brand] / total_reviews * 100, 1) if total_reviews > 0 else 0
 
-        # Находим продукт этого бренда с наивысшим рейтингом
-        best_product = None
-        best_product_avg = 0
-
-        for ds in datasets:
-            if ds.brand == best_brand:
-                ratings = [r.rating for r in ds.reviews if r.rating is not None]
-                if ratings:
-                    avg = sum(ratings) / len(ratings)
-                    if avg > best_product_avg:
-                        best_product_avg = avg
-                        best_product = ds.product
+        best_product = BestSegmentKPI._find_best_product(datasets, best_brand)
 
         return {
             "brand": best_brand,
-            "product": best_product or "N/A",
+            "product": best_product,
             "avg_rating": round(best_avg, 2),
             "positive_pct": positive_pct,
         }
+
+    @staticmethod
+    def _find_best_product(datasets: list[Dataset], brand: str) -> str:
+        """Находит лучший продукт указанного бренда"""
+        best_product = "N/A"
+        best_avg = 0
+
+        for ds in datasets:
+            if ds.brand == brand:
+                ratings = [r.rating for r in ds.reviews if r.rating is not None]
+                if ratings:
+                    avg = np.mean(ratings)
+                    if avg > best_avg:
+                        best_avg = avg
+                        best_product = ds.product
+
+        return best_product

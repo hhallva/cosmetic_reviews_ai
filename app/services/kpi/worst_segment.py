@@ -1,3 +1,6 @@
+# app/services/kpi/worst_segment_kpi.py
+import numpy as np
+from collections import defaultdict
 from app.models.dataset import Dataset
 
 
@@ -11,38 +14,33 @@ class WorstSegmentKPI:
     @staticmethod
     def calculate(datasets: list[Dataset]) -> dict:
         """
-        Возвращает худший сегмент:
-        {
-            "brand": str,
-            "product": str,
-            "avg_rating": float,
-            "negative_pct": float
-        }
+        Возвращает худший сегмент с использованием NumPy
         """
         if not datasets:
             return {"brand": "N/A", "product": "N/A", "avg_rating": 0, "negative_pct": 0}
 
-        # Группируем по бренду
-        brand_stats = {}
-        for ds in datasets:
-            brand = ds.brand
-            if brand not in brand_stats:
-                brand_stats[brand] = {"ratings": [], "negative": 0, "total": 0}
+        # Группируем рейтинги по брендам
+        brand_ratings = defaultdict(list)
+        brand_negative_counts = defaultdict(int)
+        brand_total_counts = defaultdict(int)
 
-            for r in ds.reviews:
-                if r.rating is not None:
-                    brand_stats[brand]["ratings"].append(r.rating)
-                    brand_stats[brand]["total"] += 1
-                    if r.rating <= 2:
-                        brand_stats[brand]["negative"] += 1
+        for ds in datasets:
+            ratings = [r.rating for r in ds.reviews if r.rating is not None]
+            if ratings:
+                ratings_array = np.array(ratings)
+                brand_ratings[ds.brand].extend(ratings)
+                brand_negative_counts[ds.brand] += np.sum(ratings_array <= 2)
+                brand_total_counts[ds.brand] += len(ratings)
 
         # Находим худший бренд по наименьшему среднему рейтингу
         worst_brand = None
         worst_avg = float('inf')
+        brand_avg_dict = {}
 
-        for brand, stats in brand_stats.items():
-            if stats["ratings"]:
-                avg = sum(stats["ratings"]) / len(stats["ratings"])
+        for brand, ratings in brand_ratings.items():
+            if ratings:
+                avg = np.mean(ratings)
+                brand_avg_dict[brand] = avg
                 if avg < worst_avg:
                     worst_avg = avg
                     worst_brand = brand
@@ -50,25 +48,33 @@ class WorstSegmentKPI:
         if not worst_brand:
             return {"brand": "N/A", "product": "N/A", "avg_rating": 0, "negative_pct": 0}
 
-        stats = brand_stats[worst_brand]
-        negative_pct = round(stats["negative"] / stats["total"] * 100, 1) if stats["total"] > 0 else 0
+        # Вычисляем процент негативных отзывов для худшего бренда
+        total_reviews = brand_total_counts[worst_brand]
+        negative_pct = round(brand_negative_counts[worst_brand] / total_reviews * 100, 1) if total_reviews > 0 else 0
 
-        # Находим продукт этого бренда с наименьшим рейтингом
-        worst_product = None
-        worst_product_avg = float('inf')
-
-        for ds in datasets:
-            if ds.brand == worst_brand:
-                ratings = [r.rating for r in ds.reviews if r.rating is not None]
-                if ratings:
-                    avg = sum(ratings) / len(ratings)
-                    if avg < worst_product_avg:
-                        worst_product_avg = avg
-                        worst_product = ds.product
+        # Находим худший продукт внутри бренда
+        worst_product = WorstSegmentKPI._find_worst_product(datasets, worst_brand)
 
         return {
             "brand": worst_brand,
-            "product": worst_product or "N/A",
-            "avg_rating": round(worst_avg, 2),
+            "product": worst_product,
+            "avg_rating": round(float(worst_avg), 2),
             "negative_pct": negative_pct,
         }
+
+    @staticmethod
+    def _find_worst_product(datasets: list[Dataset], brand: str) -> str:
+        """Находит худший продукт указанного бренда"""
+        worst_product = "N/A"
+        worst_avg = float('inf')
+
+        for ds in datasets:
+            if ds.brand == brand:
+                ratings = [r.rating for r in ds.reviews if r.rating is not None]
+                if ratings:
+                    avg = np.mean(ratings)
+                    if avg < worst_avg:
+                        worst_avg = avg
+                        worst_product = ds.product
+
+        return worst_product

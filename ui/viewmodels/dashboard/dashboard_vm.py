@@ -82,6 +82,9 @@ class DashboardViewModel:
             grouped[ds_meta.source].append(ds_meta)
         return dict(grouped)
 
+    def get_datasets(self):
+        return self.datasets_meta
+
     def get_selected_datasets(self):
         datasets = []
         for ds_id in self.selected_dataset_ids:

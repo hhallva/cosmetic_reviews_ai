@@ -1,11 +1,7 @@
-google-search-results
-sentence-transformers
-scikit-learn
 streamlit
-streamlit-searchbox
+requests
+dotenv
 plotly
 pandas
-ddgs
-requests
-beautifulsoup4
+numpy
 pydantic

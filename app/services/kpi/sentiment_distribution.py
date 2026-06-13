@@ -1,3 +1,5 @@
+# app/services/kpi/sentiment_distribution_kpi.py
+import numpy as np
 from app.models.dataset import Dataset
 
 
@@ -11,42 +13,56 @@ class SentimentDistributionKPI:
     @staticmethod
     def calculate(datasets: list[Dataset]) -> dict:
         """
-        Возвращает распределение:
-        {
-            "positive": int,
-            "neutral": int,
-            "negative": int,
-            "unknown": int,
-            "positive_pct": float,
-            "neutral_pct": float,
-            "negative_pct": float
-        }
+        Возвращает распределение с использованием NumPy
         """
         all_reviews = []
         for ds in datasets:
             all_reviews.extend(ds.reviews)
 
-        dist = {"positive": 0, "neutral": 0, "negative": 0, "unknown": 0}
+        if not all_reviews:
+            return SentimentDistributionKPI._empty_distribution()
 
-        for r in all_reviews:
-            if r.rating is None:
-                dist["unknown"] += 1
-            elif r.rating >= 4:
-                dist["positive"] += 1
-            elif r.rating == 3:
-                dist["neutral"] += 1
-            else:
-                dist["negative"] += 1
+        # Извлекаем рейтинги в NumPy массив
+        ratings = np.array([r.rating for r in all_reviews])
 
-        total_with_rating = dist["positive"] + dist["neutral"] + dist["negative"]
+        # Считаем распределение с помощью NumPy
+        positive_count = np.sum((ratings >= 4) & (ratings <= 5))
+        neutral_count = np.sum(ratings == 3)
+        negative_count = np.sum((ratings >= 1) & (ratings <= 2))
+        unknown_count = np.sum(np.isnan(ratings.astype(float))) if ratings.dtype == float else 0
+
+        # Для целочисленных рейтингов unknown считаем отдельно
+        if unknown_count == 0:
+            unknown_count = np.sum(ratings == None) if hasattr(ratings, '__contains__') else 0
+
+        total_with_rating = positive_count + neutral_count + negative_count
 
         if total_with_rating > 0:
-            dist["positive_pct"] = int(round(dist["positive"] / total_with_rating * 100, 1))
-            dist["neutral_pct"] = int(round(dist["neutral"] / total_with_rating * 100, 1))
-            dist["negative_pct"] = int(round(dist["negative"] / total_with_rating * 100, 1))
+            positive_pct = round(positive_count / total_with_rating * 100, 1)
+            neutral_pct = round(neutral_count / total_with_rating * 100, 1)
+            negative_pct = round(negative_count / total_with_rating * 100, 1)
         else:
-            dist["positive_pct"] = 0
-            dist["neutral_pct"] = 0
-            dist["negative_pct"] = 0
+            positive_pct = neutral_pct = negative_pct = 0
 
-        return dist
+        return {
+            "positive": int(positive_count),
+            "neutral": int(neutral_count),
+            "negative": int(negative_count),
+            "unknown": int(unknown_count),
+            "positive_pct": positive_pct,
+            "neutral_pct": neutral_pct,
+            "negative_pct": negative_pct,
+        }
+
+    @staticmethod
+    def _empty_distribution() -> dict:
+        """Возвращает пустое распределение"""
+        return {
+            "positive": 0,
+            "neutral": 0,
+            "negative": 0,
+            "unknown": 0,
+            "positive_pct": 0,
+            "neutral_pct": 0,
+            "negative_pct": 0,
+        }

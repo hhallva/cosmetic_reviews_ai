@@ -76,7 +76,7 @@ def _format_kpi_for_llm(data: Dict[str, Any]) -> str:
                   - Нейтральные: {sent_dist['neutral_pct']}% ({sent_dist['neutral']} отзывов)
                   - Негативные: {sent_dist['negative_pct']}% ({sent_dist['negative']} отзывов)
                 Индекс тональности (Sentiment Score): {data['sentiment_score']}%
-                Средний рейтинг: {data['avg_rating']}/5.0
+                Средний сентимент: {data['avg_sentiment']}
                 Показатель жалоб (Problems Index): {data['problems_index']}
                 Индекс спроса (Demand Index): {data['demand_index']}
                 """

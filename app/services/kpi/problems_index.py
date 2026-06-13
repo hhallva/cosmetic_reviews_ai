@@ -1,3 +1,5 @@
+# app/services/kpi/problems_index_kpi.py
+import numpy as np
 from app.models.dataset import Dataset
 
 
@@ -11,7 +13,6 @@ class ProblemsIndexKPI:
 
     @staticmethod
     def calculate(datasets: list[Dataset]) -> float:
-        """Возвращает среднее количество недостатков на отзыв."""
         all_reviews = []
         for ds in datasets:
             all_reviews.extend(ds.reviews)
@@ -19,5 +20,8 @@ class ProblemsIndexKPI:
         if not all_reviews:
             return 0.0
 
-        total_problems = sum(len(r.cons) for r in all_reviews)
-        return round(total_problems / len(all_reviews), 2)
+        # Используем NumPy для быстрого подсчета
+        problems_counts = np.array([len(r.cons) for r in all_reviews])
+        avg_problems = np.mean(problems_counts)
+
+        return round(float(avg_problems), 2)
