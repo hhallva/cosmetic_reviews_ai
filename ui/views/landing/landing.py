@@ -46,12 +46,19 @@ def render_landing(vm: LandingViewModel):
     def render_product_card(product_stats, idx: int):
         stars = "⭐" * int(round(product_stats.avg_rating)) + "☆" * (5 - int(round(product_stats.avg_rating)))
 
+        max_stars = 5
+        filled = round(product_stats.avg_rating) if product_stats.avg_rating <= max_stars else max_stars
+        stars = "★" * filled + "☆" * (max_stars - filled)
         with st.container(border=True):
             st.subheader(product_stats.product)
             c1, c2 = st.columns(2)
             with c1:
                 st.text(product_stats.category)
-                st.text(f"{stars} ({product_stats.avg_rating}/5.0)")
+                st.markdown(f"""
+                    <div class="rank-rating">
+                        <span class="rank-stars">{stars}</span>
+                        <span class="rank-score">{product_stats.avg_rating:.2f}</span>
+                    </div>""", unsafe_allow_html=True)
             with c2:
                 st.text(f"Датасетов: {product_stats.datasets_count}")
                 st.text(f"Отзывов: {product_stats.reviews_count}")
@@ -150,12 +157,11 @@ def render_landing(vm: LandingViewModel):
         on_click=vm.upload,
     )
 
-    st.divider()
+    st.markdown("### Продукты")
 
     left, right = st.columns([3, 1])
 
     with left:
-        st.markdown("### Продукты")
         products = vm.manager.get_products_by_brand(vm.fixed_brand)
 
         if not products:

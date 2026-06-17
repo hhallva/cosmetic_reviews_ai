@@ -8,6 +8,11 @@ import pandas as pd
 
 from app.services.ai_analyzer import analyze_with_Yandex
 
+def _reset_ai_analysis_if_product_changed(current_product: str):
+    saved_product = st.session_state.get("ai_analysis_product")
+    if saved_product != current_product:
+        st.session_state.pop("ai_analysis", None)
+        st.session_state.pop("ai_analysis_product", None)
 
 def render_metrics_view(data: dict, all_reviews: dict):
     css_file = Path(__file__).parent / "metrics.css"
@@ -199,12 +204,11 @@ def render_metrics_view(data: dict, all_reviews: dict):
                             """
                     )
 
+    current_product = data.get("product") or st.session_state.get("selected_product", "")
+    _reset_ai_analysis_if_product_changed(current_product)
 
-
-    # === ИИ-АНАЛИЗ ===
     st.divider()
 
-    # Кнопки управления
     run_analysis = st.button("Запустить ИИ-анализ", type="primary")
 
     # Запуск анализа
@@ -216,6 +220,7 @@ def render_metrics_view(data: dict, all_reviews: dict):
 
             if analysis:
                 st.session_state["ai_analysis"] = analysis
+                st.session_state["ai_analysis_product"] = current_product
                 st.success("✅ Анализ завершён!")
                 st.rerun()  # Перерисовываем, чтобы показать результат
             else:

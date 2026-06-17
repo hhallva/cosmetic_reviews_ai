@@ -18,24 +18,6 @@
     "reviews_count": 32
   },
   {
-    "id": "20260610_231526",
-    "source": "WB",
-    "brand": "Vivienne Sabo",
-    "category": "Очищающие средства для лица",
-    "product": "2",
-    "uploaded_at": "2026-06-10T23:15:26.292890",
-    "reviews_count": 32
-  },
-  {
-    "id": "20260610_231547",
-    "source": "iRecommend",
-    "brand": "Vivienne Sabo",
-    "category": "Праймер для рестниц",
-    "product": "3",
-    "uploaded_at": "2026-06-10T23:15:47.407915",
-    "reviews_count": 116
-  },
-  {
     "id": "20260611_180245",
     "source": "WB",
     "brand": "Vivienne Sabo",
@@ -114,15 +96,6 @@
     "category": "Скраб для лица",
     "product": "Integral Peaux sensible",
     "uploaded_at": "2026-06-12T21:23:10.436405",
-    "reviews_count": 40
-  },
-  {
-    "id": "20260613_013817",
-    "source": "OZON",
-    "brand": "Vivienne Sabo",
-    "category": "Праймер для рестниц",
-    "product": "1",
-    "uploaded_at": "2026-06-13T01:38:17.434647",
     "reviews_count": 40
   }
 ]

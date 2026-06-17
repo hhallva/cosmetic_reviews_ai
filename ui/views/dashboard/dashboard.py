@@ -138,6 +138,7 @@ def render_dashboard(vm: DashboardViewModel):
                         st.session_state.dialog_delete_id = None
                         # Очищаем кэш датасетов
                         st.session_state.datasets_list = []
+                        st.session_state.page = "landing"
                         st.rerun()
                 with col2:
                     if st.button("Отмена", use_container_width=True):
