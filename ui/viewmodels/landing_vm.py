@@ -11,18 +11,18 @@ from app.services.dataset_manager import DatasetManager
 
 DATASETS_DIR = Path("data/datasets")
 MANUAL_INPUT = "+ Ввести вручную"
+BRAND = "Vivienne Sabo"
 
 class LandingViewModel:
     def __init__(self):
         self.manager = DatasetManager(DATASETS_DIR)
         self.datasets = self.manager.list_datasets()
 
-        self.all_brands = sorted(set(ds.brand for ds in self.datasets))
+        self.fixed_brand = BRAND
         self.all_categories = sorted(set(ds.category for ds in self.datasets))
         self.all_products = sorted(set(ds.product for ds in self.datasets))
         self.all_sources = sorted(set(ds.source for ds in self.datasets))
 
-        self.brand_value = ""
         self.category_value = ""
         self.product_value = ""
         self.source_value = "unknown"
@@ -31,21 +31,23 @@ class LandingViewModel:
         self.error: Optional[str] = None
         self.success: Optional[str] = None
 
+    def refresh(self):
+        self.datasets = self.manager.list_datasets()
+        self.all_categories = sorted(set(ds.category for ds in self.datasets))
+        self.all_products = sorted(set(ds.product for ds in self.datasets))
+        self.all_sources = sorted(set(ds.source for ds in self.datasets))
+
     def get_product_options(self):
-        if self.brand_value and self.category_value:
+        if self.category_value:
             filtered_products = sorted(
                 {
                     ds.product
                     for ds in self.datasets
-                    if ds.brand.strip().lower() == self.brand_value.strip().lower()
-                    and ds.category.strip().lower() == self.category_value.strip().lower()
+                    if ds.category.strip().lower() == self.category_value.strip().lower()
                 }
             )
             return filtered_products + [MANUAL_INPUT] if filtered_products else [MANUAL_INPUT]
         return [MANUAL_INPUT]
-
-    def get_brand_options(self):
-        return self.all_brands + [MANUAL_INPUT]
 
     def get_category_options(self):
         return self.all_categories + [MANUAL_INPUT]
@@ -55,15 +57,11 @@ class LandingViewModel:
 
     def can_upload(self):
         return bool(
-            self.brand_value
-            and self.category_value
+            self.category_value
             and self.product_value
             and self.source_value
             and self.uploaded_file is not None
         )
-
-    def set_brand(self, value: str):
-        self.brand_value = value.strip()
 
     def set_category(self, value: str):
         self.category_value = value.strip()
@@ -78,8 +76,8 @@ class LandingViewModel:
         self.uploaded_file = value
 
     def upload(self):
-        if not self.brand_value or not self.category_value or not self.product_value:
-            self.error = "Заполните все поля: бренд, категорию и продукт"
+        if not self.category_value or not self.product_value:
+            self.error = "Заполните все поля: категорию и продукт"
             return None
 
         if self.uploaded_file is None:
@@ -95,7 +93,7 @@ class LandingViewModel:
 
             meta = self.manager.upload_dataset(
                 reviews_file=tmp_path,
-                brand=self.brand_value,
+                brand=self.fixed_brand,
                 category=self.category_value,
                 product=self.product_value,
                 source=self.source_value,
@@ -114,9 +112,22 @@ class LandingViewModel:
             return None
         finally:
             if tmp_path.exists():
-               tmp_path.unlink()
+                tmp_path.unlink()
 
-    @staticmethod
-    def on_brand_click(brand_name: str):
-        st.session_state.selected_brand = brand_name
-        st.session_state.page = "brand_page"
+    def get_products(self):
+        products = self.manager.get_products_by_brand(self.fixed_brand)
+        return products
+
+    def get_ranked_products(self, mode: str = "best"):
+        products = self.get_products()
+
+        if mode == "best":
+            return sorted(products, key=lambda p: p.avg_rating, reverse=True)
+        if mode == "worst":
+            return sorted(products, key=lambda p: p.avg_rating)
+        return products
+
+    def go_to_dashboard(self, product_name: str):
+        st.session_state.selected_brand = self.fixed_brand
+        st.session_state.selected_product = product_name
+        st.session_state.page = "dashboard"

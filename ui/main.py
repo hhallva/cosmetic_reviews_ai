@@ -10,8 +10,6 @@ import streamlit as st
 
 from viewmodels.dashboard.dashboard_vm import DashboardViewModel
 from ui.views.dashboard.dashboard import render_dashboard
-from viewmodels.brand_page_vm import BrandPageViewModel
-from views.brand.brand_page import render_brand_page
 from viewmodels.landing_vm import LandingViewModel
 from views.landing.landing import render_landing
 
@@ -35,15 +33,6 @@ def main():
     if st.session_state.page == "landing":
         vm = LandingViewModel()
         render_landing(vm)
-
-    elif st.session_state.page == "brand_page":
-        brand = st.session_state.get("selected_brand")
-        if brand:
-            vm = BrandPageViewModel(brand)
-            render_brand_page(vm)
-        else:
-            st.session_state.page = "landing"
-            st.rerun()
 
     elif st.session_state.page == "dashboard":
         vm = DashboardViewModel(

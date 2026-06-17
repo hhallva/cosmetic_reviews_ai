@@ -109,8 +109,8 @@ def render_dashboard(vm: DashboardViewModel):
             st.rerun()
 
         st.divider()
-        if st.button("← К продуктам", use_container_width=True):
-            st.session_state.page = "brand_page"
+        if st.button("← На главную", use_container_width=True):
+            st.session_state.page = "landing"
             st.rerun()
 
     dashboard_data, all_reviews = vm.get_dashboard_data()
@@ -131,6 +131,7 @@ def render_dashboard(vm: DashboardViewModel):
                 st.caption(f"{ds_to_delete.reviews_count} отзывов")
 
                 col1, col2 = st.columns(2)
+                
                 with col1:
                     if st.button("Да, удалить", type="primary", use_container_width=True):
                         vm.delete_dataset(ds_id_to_delete)
